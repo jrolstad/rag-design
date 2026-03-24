@@ -83,6 +83,13 @@ This document is a practical review lens for Python code with an added emphasis 
 - startup or composition code should wire concrete adapters into abstract ports
 - exceptions, DTOs, and persistence models should not leak across boundaries without translation
 
+## Testing Guidance
+
+- prefer fakes or simple test doubles over mocks when the goal is to verify behavior through a dependency contract
+- use mocks sparingly and mainly when interaction itself is the behavior under test
+- avoid tests that assert internal call sequences when the same outcome can be verified through state, return values, or emitted events
+- keep tests coupled to contracts and observable outcomes rather than implementation details
+
 ## Review Questions
 
 ### Correctness
@@ -112,6 +119,7 @@ This document is a practical review lens for Python code with an added emphasis 
 - Are adapters tested at their translation boundaries?
 - Do tests cover failure behavior and not just happy paths?
 - Are tests deterministic and isolated?
+- Could a fake replace a mock and make the test less coupled to implementation details?
 
 ## PR Red Flags
 
@@ -123,6 +131,17 @@ This document is a practical review lens for Python code with an added emphasis 
 - a new shared helper bypasses an existing port
 - tests need a real database or framework setup just to validate domain behavior
 - one method now does validation, persistence, formatting, and side effects together
+- a test relies on mocks to verify internal call structure instead of observable behavior
+
+## Review Feedback Wording
+
+When suggesting a fake over a mock in review, use language like this:
+
+"Prefer a fake here over a mock. This test is asserting interaction details rather than observable behavior, which makes it more brittle to refactors. A small fake for this dependency would let the test verify the outcome through state or returned values and keep the test coupled to the contract instead of the call sequence."
+
+Shorter version:
+
+"Recommend replacing this mock with a fake. The current test is tightly coupled to implementation details, while a fake would exercise the behavior through the dependency's interface and make the test more resilient."
 
 ## Practical Standard
 
