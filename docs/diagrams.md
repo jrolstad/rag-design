@@ -110,3 +110,101 @@ flowchart LR
     O2 --> O3
     O1 --> O3
 ```
+
+## AWS Deployment Diagram
+
+```mermaid
+flowchart LR
+    subgraph Src[Enterprise Sources]
+        Src1[Docs and Wikis]
+        Src2[Tickets and Incidents]
+        Src3[Code and API References]
+    end
+
+    subgraph AwsIngest[AWS Ingestion]
+        S3Raw[S3 Raw Documents]
+        SFN[Step Functions]
+        Parse[Lambda or Fargate<br/>Parse Normalize Chunk Enrich]
+        Embed[Amazon Bedrock<br/>Embeddings]
+        Meta[DynamoDB or Aurora<br/>Document Registry and ACL Metadata]
+    end
+
+    subgraph Search[AWS Retrieval Stores]
+        AOSS[Amazon OpenSearch Serverless<br/>Vector plus Lexical Search]
+        S3Norm[S3 Normalized Chunks]
+    end
+
+    subgraph Online[Online Query Path]
+        Client[Client App]
+        APIGW[API Gateway]
+        Query[Lambda Query Service]
+        Auth[Cognito or IAM Identity Center]
+        Rank[Custom Rerank and Context Assembly<br/>ACL Authority Freshness Dedup]
+        Gen[Amazon Bedrock<br/>Answer Generation]
+    end
+
+    subgraph Ops[Operations]
+        CW[CloudWatch and X-Ray]
+        SM[Secrets Manager and KMS]
+    end
+
+    Src1 --> S3Raw
+    Src2 --> S3Raw
+    Src3 --> S3Raw
+
+    S3Raw --> SFN
+    SFN --> Parse
+    Parse --> Embed
+    Parse --> Meta
+    Parse --> S3Norm
+    Embed --> AOSS
+    Parse --> AOSS
+
+    Client --> APIGW
+    APIGW --> Query
+    Auth --> Query
+    Query --> AOSS
+    Query --> Meta
+    Query --> S3Norm
+    Query --> Rank
+    Rank --> Gen
+    Gen --> Client
+
+    Query --> CW
+    Rank --> CW
+    Gen --> CW
+    SM --> Parse
+    SM --> Query
+```
+
+## AWS Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant A as API Gateway
+    participant Q as Query Lambda
+    participant I as Identity Provider
+    participant O as OpenSearch Serverless
+    participant M as Metadata Store
+    participant B as Bedrock
+
+    U->>A: Ask question
+    A->>Q: Invoke query API
+    Q->>I: Resolve user and group claims
+    I-->>Q: Principal context
+    Q->>O: Lexical and vector retrieval
+    O-->>Q: Candidate chunks
+    Q->>M: Load ACL and authority metadata
+    M-->>Q: Metadata and source policy
+    Q->>Q: ACL filter, dedupe, rerank, assemble context
+    alt evidence sufficient
+        Q->>B: Generate answer with citations
+        B-->>Q: Grounded answer
+        Q-->>A: Answer plus citations
+        A-->>U: Grounded response
+    else evidence weak or inaccessible
+        Q-->>A: Abstain
+        A-->>U: Not enough accessible evidence
+    end
+```

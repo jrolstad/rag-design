@@ -5,6 +5,7 @@ Reference architecture and starter implementation for a retrieval-augmented gene
 ## Contents
 
 - `docs/rag-reference-architecture.md`: architecture summary and design defaults
+- `docs/aws-reference-architecture.md`: AWS service mapping and deployment guidance
 - `docs/diagrams.md`: one-page Mermaid diagrams
 - `internal/rag/models.go`: core contracts for documents, chunks, evidence, citations, and answers
 - `internal/rag/pipeline.go`: reference orchestration pipeline with ACL filtering, authority-aware selection, and abstention
